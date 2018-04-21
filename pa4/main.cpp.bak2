@@ -1,0 +1,157 @@
+#include <math.h>
+#include <iostream>
+#include <algorithm>
+#include "lapacke.h"
+#include "DTMatlabDataFile.h"
+#include "DTArguments.h"
+#include "DTDoubleArray.h"
+#include "DTIntArray.h"
+#include "DTMesh2D.h"
+#include "DTFunction2D.h"
+#include "DTMesh2DGrid.h"
+
+int main(int argc, const char *argv[])
+{
+    DTSetArguments(argc,argv);
+    // note, to understand this part take a look in the MAN pages, at section of parameters.
+
+    DTMatlabDataFile inputFile("Input.mat", DTFile::ReadOnly);
+    DTMesh2D f;
+    Read(inputFile, "f", f);
+    DTFunction2D g;
+    Read(inputFile, "g", g);
+
+    DTMesh2DGrid grid = f.Grid();
+    double h = grid.dx();
+    DTDoubleArray fData = f.DoubleData();
+
+//    DTFunction2D x = DTFunction2D::x();
+//    DTFunction2D y = DTFunction2D::y();
+
+//    DTFunction2D g = x*x+y;
+    if(grid.n() < 3)
+    {
+        std::cout << "invalid parameters." << std::endl;
+        return -1;
+    }
+
+    int kl = grid.n() - 2;
+    int ku = grid.n() - 2;
+    int nrhs = 1;
+    int n = (grid.m() - 2) * (grid.n() - 2);
+    int ldb = n;
+    int ldab = 2*kl+ku +1;
+    int rows = 2*kl + ku + 1;
+    int cols = grid.n()-2;
+
+    int ipiv[n];
+    int info;
+
+//    kl=5; ku = 5; n = 25; rows = 2*kl+ku+1; cols = 5;
+    DTMutableDoubleArray AB(rows, n);
+    for(int i = 0; i < n; ++i)
+    {
+        AB(kl+ku, i) = 4;
+        AB(kl, i) = -1;
+
+        if(i % cols == 0 && i != n-1)
+        {
+            AB(kl+ku-1, i) = 0;
+        }
+        else if(i>0)
+        {
+            AB(kl+ku-1, i) = -1;
+        }
+
+        for(int j = kl+1; j < kl+ku-1; ++j)
+        {
+            AB(j, i) = 0;
+        }
+
+        if((i+1)%cols == 0 && i != 0)
+        {
+            AB(kl+ku+1,i) = 0;
+        }
+        else
+        {
+            AB(kl+ku+1, i) = -1;
+        }
+        
+        for(int j = kl+ku+2; j < rows; ++j)
+        {
+            AB(j, i) = 0;
+        }
+        AB(rows-1,i) = -1;
+    }
+    DTMutableDoubleArray at = Transpose(AB);
+    // create right hand side
+    DTMutableDoubleArray fInterior(grid.m() - 2, grid.n() -2);
+    DTMutableDoubleArray returnArray(grid.m(), grid.n());
+    double hsq = h * h;
+    double xzero = grid.Origin().x;
+    double yzero = grid.Origin().y;
+    for(int i = 0; i < fData.m() - 2; ++i)
+    {
+        for(int j = 0; j < fData.n() - 2; ++j)
+        {
+            fInterior(i, j) = 0 - fData(i+1,j+1) * hsq;
+        }
+    }
+    // near the boundary of i==0
+    for(int j = 0; j < grid.m()-2; ++j)
+    {
+        double ytemp = yzero;
+        double xtemp = xzero + (j+1)*h;
+        fInterior(j, 0) += g(xtemp,ytemp);
+        returnArray(j+1, 0) = g(xtemp, ytemp);
+    }
+
+        // near the boundary of i==grid.n()-1
+    for(int j = 0; j < grid.m()-2; ++j)
+    {
+        double ytemp = yzero + (grid.n()-1) * h;
+        double xtemp = xzero + (j+1)*h;
+        fInterior(j, grid.n() - 3) += g(xtemp,ytemp);
+        returnArray(j+1, grid.n() - 1) = g(xtemp,ytemp);
+    }
+        // near the boundary of j==0
+    for(int i = 0; i < grid.n()-2; ++i)
+    {
+        double ytemp = yzero + (i+1)*h;
+        double xtemp = xzero;
+        fInterior(0, i) += g(xtemp,ytemp);
+        returnArray(0, i+1) = g(xtemp,ytemp);
+    }
+    // near the boundary of j==grid.m()-1
+    for(int i = 0; i < grid.n()-2; ++i)
+    {
+        double ytemp = yzero + (i+1) * h;
+        double xtemp = xzero + (grid.m()-1)*h;
+        fInterior(grid.m()-3, i) += g(xtemp,ytemp);
+        returnArray(grid.m()-1, i+1) = g(xtemp,ytemp);
+    }
+
+    int t = grid.n() -1;
+    int q = grid.m() - 1;
+    returnArray(0,0) = g(0,0);
+    returnArray(0, t) = g(xzero,(grid.n()-1)*h+yzero);
+    returnArray(q, 0) = g((grid.m()-1)*h+xzero, yzero);
+    returnArray(q, t) = g((grid.m()-1)*h+xzero,(grid.n()-1)*h+yzero);
+
+    LAPACK_dgbsv(&n, &kl, &ku, &nrhs, AB.Pointer(), &ldab, ipiv, fInterior.Pointer(), &ldb, &info);
+
+    // copy the interior elements to return array
+    for(int i = 1; i <= grid.m() -2; ++i)
+    {
+        for(int j = 1; j <= grid.n() - 2; ++j)
+        {
+            returnArray(i,j) = fInterior(i-1, j-1);
+        }
+    }
+
+
+    DTMatlabDataFile outputFile("Output.mat", DTFile::NewReadWrite);
+    DTMesh2D uMesh(grid, returnArray);
+    Write(outputFile, "u", uMesh);
+    return 0;
+}

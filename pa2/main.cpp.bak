@@ -1,0 +1,186 @@
+#include <iostream>
+#include <math.h>
+#include <lapacke.h>
+#include "DTMatlabDataFile.h"
+#include "DTArguments.h"
+#include "DTDoubleArray.h"
+
+int calculateFactorization(DTDoubleArray A, DTDoubleArray B)
+{
+
+    DTMutableDoubleArray mA = A.Copy();
+    DTMutableDoubleArray mB = B.Copy();
+
+    int M = mA.m();
+    int N = mA.n();
+    int NRHS = mB.n();
+    int LDA = M;
+    int LDB = mB.m();
+    int minDim = min(M,N);
+    int IPIV[minDim];
+
+    std::cout << "compute the LU factorization..." << std::endl;
+    //void LAPACK_dgetrf( lapack_int* m, lapack_int* n, double* a, lapack_int* lda, lapack_int* ipiv, lapack_int *info );
+    LAPACK_dgetrf(&M,&N,mA.Pointer(),&LDA,IPIV,&INFO);
+
+
+    DTMatlabDataFile outputFile("Output.mat",DTFile::NewReadWrite);
+
+    // Output from LU & P
+    outputFile.Save(mA,"LU");
+    outputFile.Save(*IPIV, "P");
+
+    return 0;
+}
+
+int solveSystem(DTDoubleArray A, DTDoubleArray B)
+{
+    
+}
+
+int main(int argc, const char *argv[])
+{
+    DTSetArguments(argc,argv);
+    // note, to understand this part take a look in the MAN pages, at section of parameters.
+    char    TRANS = 'N';
+    int     INFO=3;
+
+    DTMatlabDataFile inputFile("Input.mat", DTFile::ReadOnly);
+    DTDoubleArray A = inputFile.ReadDoubleArray("A");
+    DTDoubleArray B = inputFile.ReadDoubleArray("b");
+
+    if(A.n() != B.m() || A.m() == 0 || A.n() == 0 || B.m() == 0 || B.n() == 0)
+    {
+        std::cout << "Invalid input array dimensions." << std::endl;
+        return -1;
+    }
+
+    if(calculateFactorization(A, B) != 0)
+    {
+        return -1;
+    }
+    
+    // checks INFO, if INFO != 0 something goes wrong, for more information see the MAN page of dgetrf.
+    if(INFO)
+    {
+        std::cout << "an error occured : "<< INFO << std::endl;
+    }else{
+        std::cout << "solving the system..."<< std::endl;
+        // void LAPACK_dgetrs( char* trans, lapack_int* n, lapack_int* nrhs, const double* a, lapack_int* lda, const lapack_int* ipiv,double* b, lapack_int* dB, lapack_int *info );
+        LAPACK_dgetrs(&TRANS,&N,&NRHS,mA.Pointer(),&LDA,IPIV,mB.Pointer(),&LDB,&INFO);
+        if(INFO < 0)
+        {
+            // checks INFO, if INFO != 0 something goes wrong, for more information see the MAN page of dgetrs.
+            std::cout << "an error occured : "<< INFO << std::endl;
+        }else{
+            DTMatlabDataFile outFile2("Output.mat");
+            outFile2.Save(mB, "x");
+            outFile2.Flush();
+        }
+    }
+
+    // estimate condition number
+    char NORM = '1'; // one-norm
+
+    double ANORM = 0.0;
+    // one norm of A
+    for(int i = 0; i < A.n(); ++i)
+    {
+        double tempSum = 0.0;
+        for(int j = 0; j < A.m(); ++j)
+        {
+            tempSum += abs(A(i,j));
+        }
+        if(tempSum > ANORM)
+        {
+            ANORM = tempSum;
+        }
+    }
+    double RCOND = 0.0;
+    int IWORK[N];
+    double *WORK = new double(4*N);
+    LAPACK_dgecon(&NORM, &N, mA.Pointer(), &LDA, &ANORM, &RCOND, WORK, IWORK, &INFO );
+
+    if(INFO < 0)
+    {
+        std::cout << "Illegal value at " << INFO << " th argument." << std::endl;
+        return -1;
+    }
+
+    outputFile.Save(RCOND, "KappaOne");
+
+    // infinity norm of A
+
+    ANORM = 0.0;
+    for(int i = 0; i < A.m(); ++i)
+    {
+        double tempSum = 0.0;
+        for(int j = 0; j < A.n(); ++j)
+        {
+            tempSum += abs(A(i,j));
+        }
+        if(tempSum > ANORM)
+        {
+            ANORM = tempSum;
+        }
+    }
+//    delete WORK;
+
+    double RCOND2 = 0.0;
+    int IIWORK[N];
+    double *oWork = new double(4*N);
+    NORM = 'I';
+    LAPACK_dgecon(&NORM, &N, mA.Pointer(), &LDA, &ANORM, &RCOND2, oWork, IIWORK, &INFO );
+    if(INFO < 0)
+    {
+        std::cout << "Illegal value at " << INFO << " th argument." << std::endl;
+        return -1;
+
+    }
+
+    delete oWork;
+    //    outputFile.Save(RCOND2, "KappaInf");
+    std::cout << "KappaInf is: "<< RCOND2 << std::endl;
+    // improve the solution
+    TRANS = 'N';
+    int LDAF = mA.m();
+    int LDX = mB.m();
+    double *FERR = new double(NRHS);
+    double *BERR = new double(NRHS);
+    WORK = new double(3 * N);
+    LAPACK_dgerfs(&TRANS, &N, &NRHS, A.Pointer(), &LDA, mA.Pointer(), &LDAF, IPIV, B.Pointer(), &LDB, mB.Pointer(), &LDX, FERR, BERR, WORK, IWORK, &INFO);
+    if(INFO == 0)
+    {
+//        DTMatlabDataFile outputFile("Output.mat");
+//        outputFile.Save(mB, "ximproved");
+//        outputFile.Save(*FERR, "Ferr");
+//        outputFile.Save(*BERR, "Berr");
+//        outputFile.Flush();
+      std::cout << "ximproved is: " << std::endl;
+      for(int i = 0; i < mB.m(); ++i){
+	for(int j = 0; j < mB.n(); ++j)
+	  {
+	    std::cout << mB(i,j) << " ";
+	  }
+	std::cout << std::endl;
+      }
+      std::cout << "Ferr: " <<std::endl;
+      for(int i = 0; i < NRHS; ++i)
+	{
+	  std::cout << FERR[i] << " ";
+	}
+      std::cout << std::endl;
+      std::cout << "Berr: " <<std::endl;
+      for(int i = 0; i < NRHS; ++i)
+	{
+	  std::cout << BERR[i] << " ";
+	}
+      std::cout << std::endl;
+    }
+
+//    delete [] FERR;
+//    delete [] BERR;
+//    delete [] WORK;
+    std::cout << "program terminated."  << std::endl;
+    return 0;
+}  

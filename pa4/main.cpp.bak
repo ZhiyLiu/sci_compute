@@ -1,0 +1,236 @@
+#include <math.h>
+#include <iostream>
+#include <algorithm>
+#include "lapacke.h"
+#include "DTMatlabDataFile.h"
+#include "DTArguments.h"
+#include "DTDoubleArray.h"
+#include "DTIntArray.h"
+#include "DTMesh2D.h"
+#include "DTFunction2D.h"
+#include "DTMesh2DGrid.h"
+
+int main(int argc, const char *argv[])
+{
+    DTSetArguments(argc,argv);
+    // note, to understand this part take a look in the MAN pages, at section of parameters.
+
+    DTMatlabDataFile inputFile("Input.mat", DTFile::ReadOnly);
+    DTMesh2D f;
+    Read(inputFile, "f", f);
+    DTFunction2D g;
+    Read(inputFile, "g", g);
+
+    DTMesh2DGrid grid = f.Grid();
+    double h = grid.dx();
+    DTDoubleArray fData = f.DoubleData();
+
+//    DTFunction2D x = DTFunction2D::x();
+//    DTFunction2D y = DTFunction2D::y();
+
+//    DTFunction2D g = x*x+y;
+    if(grid.n() < 3)
+    {
+        std::cout << "invalid parameters." << std::endl;
+        return -1;
+    }
+
+    int kl = grid.n() - 2;
+    int ku = grid.n() - 2;
+    int nrhs = 1;
+    int n = (grid.m() - 2) * (grid.n() - 2);
+    int ldb = n;
+    int ldab = 2*kl+ku +1;
+    int rows = 2*kl + ku + 1;
+    int cols = grid.n()-2;
+
+    /********test code *************/
+/*    n = 16; cols = 4; kl = ku = 4; rows = 13;
+
+    double tempA[n*n];
+    for(int i = 0; i < n * n; ++i)
+    {
+        tempA[i] = 0.0;
+    }
+*/
+    double ab[rows*n];
+/*    for(int i=0; i < rows*n; ++i)
+    {
+        ab[i] = 0.0;
+        }
+*/
+    for(int j = 1;j <= n; ++j)
+    {
+        for(int i = 1; i <= n; ++i)
+        {
+            // the element right to diag
+            if(j - i == 1)
+            {
+                double a_ij;
+                // periodic
+                if(i % cols == 0)
+                {
+                    a_ij = 0.0;
+                }
+                else
+                {
+                    a_ij = -1.0;
+                }
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+            }
+            // elements on the right of diag between 2 -1s
+            else if(j - i > 1 && j - i < cols)
+            {
+                double a_ij = 0.0;
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+
+            }
+            // another non-zero element right to the diag
+            else if(j - i == cols)
+            {
+                double a_ij = -1.0;
+                /*   if(n - i < cols)
+                {
+                    a_ij = 0.0;
+                    }*/
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+
+            }
+            // one non-zero element left to the diag
+            else if(i - j == 1)
+            {
+                double a_ij = -1.0;
+                // periodic
+                if(j % cols == 0)
+                {
+                    a_ij = 0.0;
+                }
+                else
+                {
+                    a_ij = -1.0;
+                }
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+            }
+            // zeros between 2 -1s
+            else if(i - j > 1 && i - j < cols)
+            {
+                double a_ij = 0.0;
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+
+            }
+            // another non-zero element on the left to the diag
+            else if(i - j == cols)
+            {
+                double a_ij = -1.0;
+                // convert to index in ab
+                if((i >= j-ku) && (i >= 1)  && (i <= j+kl) && (i <= n))
+                {
+                    int p = n * (kl + ku + i - j) + j;
+                    ab[p-1] = a_ij;
+                }
+//                tempA[(i-1) * n + j - 1] = a_ij;
+
+            }
+        }
+    }
+
+    // store diag elements in a into ab
+    for(int i = 0; i < n; ++i)
+    {
+        int p = n * (kl + ku) + i;
+        ab[p] = 4;
+//        tempA[i * n + i] = 4;
+    }
+    /*  for(int i = 0; i < rows*n; ++i)
+    {
+        //std::cout << tempA[i] << " ";
+        std::cout << ab[i] << " ";
+        if((i + 1)%(n) == 0)
+        {
+            std::cout << std::endl;
+        }
+        }
+*/
+    // create right hand side
+    DTMutableDoubleArray fInterior(grid.m() - 2, grid.n() -2);
+    DTMutableDoubleArray returnArray(grid.m(), grid.n());
+    double hsq = h * h;
+    double xzero = grid.Origin().x;
+    double yzero = grid.Origin().y;
+    for(int i = 1; i < fData.m() - 1; ++i)
+    {
+        double xtemp = xzero + (i-1) * h;
+        for(int j = 1; j < fData.n() - 1; ++j)
+        {
+            fInterior(i-1, j-1) = 0 - fData(i,j) * hsq;
+
+            double ytemp = yzero + j * h;
+            double bdry = g(xtemp, ytemp);
+            //corners
+            if((i == 1 && j == 1) || (i == fData.m() -2 && j == fData.n() - 2)
+               || (i == 1 && j == fData.n() - 2) || (i == fData.m() - 2 && j == 1))
+            {
+                fInterior(i-1, j-1) += 2 * bdry;
+                returnArray(i-1, j-1) = bdry;
+
+            }
+            // edges
+            else if(i == 1 || j == 1 || i == fData.m() - 2 || j == fData.n() - 2)
+            {
+                fInterior(i-1, j-1) += bdry;
+                returnArray(i-1, j-1) = bdry;
+            }
+
+        }
+    }
+
+    int info, ipiv;
+    n = rows;
+    LAPACK_dgbsv(&n, &kl, &ku, &nrhs, ab, &ldab, &ipiv, fInterior.Pointer(), &ldb, &info);
+    //LAPACK_dgbtf2(rows, cols, kl, ku, ab, ldab, &ipiv, info);
+
+    // copy the interior elements to return array
+    for(int i = 1; i < fData.m() -1; ++i)
+    {
+        for(int j = 1; j < fData.n() - 1; ++j)
+        {
+            int p = (i-1) * cols + j -1;
+            returnArray(i,j) = fInterior.Pointer()[p];
+        }
+    }
+
+    DTMatlabDataFile outputFile("Output.mat", DTFile::NewReadWrite);
+    DTMesh2D uMesh(grid, returnArray);
+    Write(outputFile, "u", uMesh);
+    return 0;
+}
