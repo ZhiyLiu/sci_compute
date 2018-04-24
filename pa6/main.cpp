@@ -14,7 +14,6 @@
 #include <Eigen/Sparse>
 #include<Eigen/SparseCholesky>
 
-int sparseSolve();
 int main(int argc, const char *argv[])
 {
     DTSetArguments(argc,argv);

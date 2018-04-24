@@ -13,7 +13,7 @@ CXX =  c++
 .cpp.o:
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-CXXFLAGS = -O3
+CXXFLAGS = -g
 
 libDT.a : $(OBJS)
 	ar -r -u libDT.a $(OBJS)

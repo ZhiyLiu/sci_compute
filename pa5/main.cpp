@@ -12,6 +12,7 @@
 #include "DTMesh2D.h"
 #include "DTFunction2D.h"
 #include "DTMesh2DGrid.h"
+#include "time.h"
 
 typedef Eigen::SparseMatrix<double> SpMat; // declares a column-major sparse matrix type of double
 typedef Eigen::Triplet<double> T;
@@ -22,7 +23,7 @@ int main(int argc, char** argv)
     //DTSetArguments(argc,argv);
     // note, to understand this part take a look in the MAN pages, at section of parameters.
 
-    DTMatlabDataFile inputFile("Input.mat", DTFile::ReadOnly);
+    DTMatlabDataFile inputFile("MyInput.mat", DTFile::ReadOnly);
     DTMesh2D f;
     Read(inputFile, "f", f);
     DTFunction2D g;
@@ -184,6 +185,8 @@ int main(int argc, char** argv)
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     // Solving:
+    clock_t t1,t2;
+    t1 = clock();
     Eigen::SimplicialLLT<SpMat> solver;
     solver.compute(A);
     if(solver.info() != Eigen::Success)
@@ -191,7 +194,8 @@ int main(int argc, char** argv)
         return -1;
     }
     Eigen::VectorXd x = solver.solve(b);         // use the factorization to solve for the given right hand side
-
+    t2 = clock();
+    std::cout << "Time: " << (double)(t2-t1)/CLOCKS_PER_SEC << std::endl;
 
     // corners
     int t = grid.n() -1;

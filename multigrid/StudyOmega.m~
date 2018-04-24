@@ -1,0 +1,5 @@
+dim = 20;
+u0 = zeros(dim, dim);
+
+
+save('MyInput.mat', 'f', 'g' ,'-v4');

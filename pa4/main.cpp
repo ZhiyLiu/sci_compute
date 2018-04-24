@@ -9,13 +9,14 @@
 #include "DTMesh2D.h"
 #include "DTFunction2D.h"
 #include "DTMesh2DGrid.h"
+#include "time.h"
 
 int main(int argc, const char *argv[])
 {
     DTSetArguments(argc,argv);
     // note, to understand this part take a look in the MAN pages, at section of parameters.
 
-    DTMatlabDataFile inputFile("Input.mat", DTFile::ReadOnly);
+    DTMatlabDataFile inputFile("MyInput.mat", DTFile::ReadOnly);
     DTMesh2D f;
     Read(inputFile, "f", f);
     DTFunction2D g;
@@ -193,7 +194,11 @@ int main(int argc, const char *argv[])
 //    LAPACK_dgesv(&n, &nrhs, a.Pointer(), &n, ipiv, fInterior.Pointer(), &ldb, &info);
 
     DTMutableDoubleArray fTrans = Transpose(fInterior);
+    clock_t t1, t2;
+    t1 = clock();
     LAPACK_dgbsv(&n, &kl, &ku, &nrhs, AB.Pointer(), &ldab, ipiv, fTrans.Pointer(), &ldb, &info);
+    t2 = clock();
+    std::cout << "Time:" << (double)(t2-t1)/CLOCKS_PER_SEC << std::endl;
     // copy the interior elements to return array
     for(int i = 1; i <= grid.m() -2; ++i)
     {
