@@ -16,13 +16,15 @@
 double residual(DTMutableDoubleArray& u, double* b, double scale, double* r)
 {
     double inf_norm = -1.0;
+    double* data = u.Pointer();
     for(int i = 1; i < u.m()-1; ++i)
     {
         for(int j = 1; j < u.n()-1; ++j)
         {
             // rowNum in right hand side vector
             int idx = i*u.n() + j;
-            double ax = 4 * u(i,j) - u(i,j-1) - u(i,j+1) - u(i+1,j) - u(i-1,j);
+//            double ax = 4 * u(i,j) - u(i,j-1) - u(i,j+1) - u(i+1,j) - u(i-1,j);
+            double ax = 4 * data[idx] - data[idx -1] - data[idx + 1] - data[idx+u.n()] - data[idx - u.n()];
             ax *= scale;
             r[idx] = -b[idx] - ax;
             if(inf_norm < abs(r[idx]))

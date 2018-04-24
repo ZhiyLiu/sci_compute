@@ -7,6 +7,9 @@ int sweep(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, double
 
     double hsq = h * h;
     double qomega = 0.25 * omega;
+    double oneMinusOmega = 1-omega;
+    double* data = u.Pointer();
+    double* rhs = b.Pointer();
     while(t < N)
     {
         t++;
@@ -14,7 +17,21 @@ int sweep(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, double
         {
             for(int j = 1; j < u.n()-1; ++j)
             {
-                u(i,j) = (1-omega) * u(i,j) + qomega * (u(i-1,j) + u(i+1,j) + u(i, j-1) + u(i,j+1) - hsq*b(i,j));
+                int idx = i*u.n() + j;
+/*                int idxL = idx-1;
+                int idxR = idx+1;
+                int idxU = idx-u.n();
+                int idxD = idx+u.n();
+                double u0 = u(idx);
+                double uL = u(idxL);
+                double uR = u(idxR);
+                double uU = u(idxU);
+                double uD = u(idxD);
+*/
+//                u(i,j) = (1-omega) * u(i,j) + qomega * (u(i-1,j) + u(i+1,j) + u(i, j-1) + u(i,j+1) - hsq*b(i,j));
+
+//                u(idx) = oneMinusOmega * u(idx) + qomega * (u(idx+1) + u(idx-1) + u(idx+u.n()) + u(idx-u.n()) - hsq * b(idx));
+                data[idx] = oneMinusOmega * data[idx] + qomega * (data[idx+1] + data[idx-1] + data[idx+u.n()] + data[idx-u.n()] - hsq * rhs[idx]);
             }
         }
     }

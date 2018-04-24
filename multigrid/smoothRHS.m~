@@ -1,0 +1,6 @@
+function f = smoothRHS(dim)
+    x = linspace(0,1, dim);
+    y = linspace(0,1, dim);
+    f = exp((x-0.5).^2 + (y-0.5).^2);
+    x;y;dim;
+end

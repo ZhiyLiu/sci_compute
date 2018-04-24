@@ -10,7 +10,7 @@
 #include "DTDoubleArray.h"
 #include "DTIntArray.h"
 #include "DTMesh2D.h"
-
+#include <sstream>
 #include "DTFunction2D.h"
 #include "DTMesh2DGrid.h"
 #include "DTSeriesMesh2D.h"
@@ -135,11 +135,15 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
     DTMutableMesh2D refineGrid(DTMesh2DGrid(origin, h , h, b.m(), b.n()), DTMutableDoubleArray(b.m(),b.n()));
     refine(coarseGrid, refineGrid);
     DTMutableDoubleArray refine_residual = refineGrid.DoubleData();
+    double* uPointer = u.Pointer();
+    double* rPointer = refine_residual.Pointer();
     for(int i = 1; i < refineGrid.m() - 1; ++i)
     {
         for(int j = 1; j < refineGrid.n() - 1; ++j)
         {
-            u(i,j) += refine_residual(i,j);
+            int idx = i*refineGrid.n() +j;
+//            u(i,j) += refine_residual(i,j);
+            uPointer[idx] += rPointer[idx];
         }
     }
 
@@ -154,21 +158,27 @@ int main(int argc, char** argv)
     /********************************
      //    Read input data
      *************************/
+    int Nb, Na, NList, id;
+    double omega;
     if(argc < 6)
     {
-        std::cout << "Usage: " << argv[0] << " <Length of NList>  <sweep before> <sweeps after> <omega> <#iter>" << std::endl;
-        return -1;
+        std::cout << "Usage: " << argv[0] << " <Length of NList>  <sweep before> <sweeps after> <omega> <instance id>" << std::endl;
+        std::cout << "Currently use default value." << std::endl;
+        Nb =  3;
+        Na = 3;
+        omega = 0.8;
+    }
+    else
+    {
+        NList = atoi(argv[1]);
+        Nb = atoi(argv[2]);
+        Na = atoi(argv[3]);
+        omega = atof(argv[4]);
+        id = atoi(argv[5]);
+
     }
 
-    int NList = atoi(argv[1]);
-    int Nb = atoi(argv[2]);
-    int Na = atoi(argv[3]);
-    double omega = atof(argv[4]);
-    int iterNum = atoi(argv[5]);
-/*    int Nb =  3;
-      int Na = 3;
-      double omega = 0.8;
-*/
+    residuals.clear();
     // Successive over relaxation(w) method
     DTMatlabDataFile inputFile("MyInput.mat", DTFile::ReadOnly);
     DTMesh2D f;
@@ -184,19 +194,24 @@ int main(int argc, char** argv)
     recurse(u, b, omega, h, Nb, Na, grid.Origin());
 
     DTMatlabDataFile outputFile("OutputAll.mat", DTFile::NewReadWrite);
+    DTMutableDoubleArray rList(residuals.size(), 1);
+    ostringstream plotId;
+    plotId << "r";
+    plotId << id;
 
-    DTMutableDoubleArray rList(residuals.size());
-    if(outputFile.Contains("r"))
+    std::string sId = plotId.str();
+    if(outputFile.Contains(sId))
     {
-        Read(outputFile, "r", rList);
+        Read(outputFile, sId, rList);
     }
 
     for(int i = 0; i < residuals.size(); ++i)
     {
         rList(i) = residuals[i];
     }
-    Write(outputFile, "r", rList);
-    Write(outputFile, "u", u);
+
+    Write(outputFile, sId, rList);
+//    Write(outputFile, "u", u);
 
     return 1;
 }

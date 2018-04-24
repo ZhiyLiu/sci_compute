@@ -1,27 +1,31 @@
 clear all;
 
-dimList = [129];
+dimList = [33,65,129];
 NList = length(dimList);
 na = 3; nb = 3;
 omega = 0.8;
 
-
 for i = 1:NList
-    rand('seed', 23423);
     
     dim = dimList(i);
-    u = zeros(dim, dim);
-    f = zeros(dim, dim);
-    f(2:end-1, 2:end-1) = 1;%rand(dim-2, dim-2);
     space = 1/dim;
+    u = zeros(dim, dim);
+    %f = randomRHS(dim);
+    f = smoothRHS(dim);
     f_loc = [0; 0; space; space];
     u_loc = [0; 0; space; space];
 
     save 'MyInput.mat' '-v4' ;
     s1 = './mgv';
-    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(na),{' '}, num2str(nb), {' '}, num2str(omega), {' 1'}));
+    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(na),{' '}, num2str(nb), {' '}, num2str(omega), {' '}, num2str(i)));
     system(command);
 %    !./mgv $NList $na $nb $omega $i
     load('OutputAll.mat');
-    plot(r);
 end
+
+plot(r1);hold on;
+plot(r2);hold on;
+plot(r3);hold on;
+maxLength = max([length(r1), length(r2), length(r3)]);
+set(gca, 'xtick', 0:maxLength+1);
+legend(num2str(dimList(1)),num2str(dimList(2)), num2str(dimList(3)));
