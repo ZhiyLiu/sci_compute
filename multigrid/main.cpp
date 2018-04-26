@@ -24,7 +24,7 @@
 void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, double h, int Nb, int Na, DTPoint2D origin)
 {
     // terminate criteria
-//    if(h >= h_max)
+
     if(b.m() < 6 || b.n() < 6)
     {
         //solve it if the size excluding boundary is 3*3 or 2*2
@@ -38,48 +38,12 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
      *************************/
     sweep(u, b, omega, h, Nb);
 
-    /****************************
-     //    Test Sweep
-     *************************/
-/*
-  sparseSolve();
-  DTMatlabDataFile outputSweep("OutputSweep.mat",DTFile::NewReadWrite);
-
-  DTMatlabDataFile referFile("ExactSolution.mat", DTFile::ReadOnly);
-  DTMesh2D xexact;
-  Read(referFile, "u", xexact);
-  DTMutableDoubleArray x_exact = xexact.DoubleData().Copy();
-
-  double err = 10000;
-  for(int i = 1; i < x_exact.m()-1; i++)
-  {
-  for(int j = 1; j< x_exact.n()-1; ++j)
-  {
-  double err_norm = abs(x_exact(i,j) - u(i,j));
-  if(err> err_norm)
-  {
-  err = err_norm;
-  }
-  }
-  }
-  std::cout << "eror norm:" << err << std::endl;
-  Write(outputSweep, "u_final", u);
-*/
     /********************************
      //    Residual
      *************************/
     double scale = 1/(h*h);
     DTMutableDoubleArray r(b.m(),b.n());
     double res = residual(u, b, scale, r);
-
-    /********************************
-     //    Test Residual
-     *************************/
-    DTMatlabDataFile outputResidual("OutputResidual.mat", DTFile::NewReadWrite);
-      Write(outputResidual, "b", b);
-      Write(outputResidual, "r", r);
-      Write(outputResidual, "u", u);
-
 
     /********************************
      //    Coarsen
@@ -102,6 +66,7 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
     }
     recurse(uc, rc, omega, 2*h, Nb, Na, origin);
 
+
     /********************************
      //    Refine & Update
      *************************/
@@ -109,6 +74,7 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
     DTMutableMesh2D refineGrid(DTMesh2DGrid(origin, h , h, b.m(), b.n()), DTMutableDoubleArray(b.m(),b.n()));
     refine(targetCoarseGrid, refineGrid);
     DTMutableDoubleArray refine_residual = refineGrid.DoubleData();
+
     double* uPointer = u.Pointer();
     double* rPointer = refine_residual.Pointer();
     for(int i = 1; i < refineGrid.m() - 1; ++i)
@@ -116,16 +82,16 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
         for(int j = 1; j < refineGrid.n() - 1; ++j)
         {
             int idx = i*refineGrid.n() +j;
-            u(i,j) += refine_residual(i,j);
-//            uPointer[idx] += rPointer[idx];
+//            u(i,j) -= refine_residual(i,j);
+            uPointer[idx] -= rPointer[idx];
         }
     }
-    res = residual(u, b, scale, r);
+//    res = residual(u, b, scale, r);
     /********************************
      //    Sweep after
      *************************/
     sweep(u, b, omega, h, Na);
-    res = residual(u, b, scale, r);
+//    res = residual(u, b, scale, r);
 
 }
 int main(int argc, char** argv)
@@ -174,36 +140,39 @@ int main(int argc, char** argv)
 
     DTMatlabDataFile outputFile("OutputAll.mat", DTFile::NewReadWrite);
     DTMutableDoubleArray u = u0.DoubleData().Copy();
-//    directSolve(b.m()-2, b.n()-2, h, b, u);
 
-    double inf_norm;
-//    inf_norm = residual(u, b.Pointer(), scale, r.Pointer());
-
-    for(int i = 0; i < 100; ++i)
+    double inf_norm = 0.0;
+    clock_t t1, t2;
+    double total_time = 0.0;
+    int v_cycles = 100;
+    for(int i = 0; i < v_cycles; ++i)
     {
+        t1 = clock();
         recurse(u, b, omega, h, Nb, Na, grid.Origin());
         inf_norm = residual(u, b, scale, r);
         residuals.push_back(inf_norm);
-
+        t2 = clock();
+        total_time += (double)(t2-t1)/CLOCKS_PER_SEC;
     }
+    double mean_time = double(total_time / v_cycles);
 
     DTMutableDoubleArray rList(residuals.size(), 1);
     ostringstream plotId;
     plotId << "r";
     plotId << id;
 
-    // ostringstream uId;
-    // uId << "u";
-    // uId << id;
+    ostringstream timeId;
+    timeId << "time";
+    timeId << id;
     std::string sId = plotId.str();
-//    std::string suId = uId.str();
+    std::string sTimeId = timeId.str();
     for(int i = 0; i < residuals.size(); ++i)
     {
         rList(i) = residuals[i];
     }
 
     Write(outputFile, sId, rList);
-    Write(outputFile, "u", u);
+    Write(outputFile, sTimeId, mean_time);
 
     return 1;
 }

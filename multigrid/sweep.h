@@ -28,10 +28,10 @@ int sweep(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, double
                 double uU = u(idxU);
                 double uD = u(idxD);
 */
-                u(i,j) = (1-omega) * u(i,j) + qomega * (u(i-1,j) + u(i+1,j) + u(i, j-1) + u(i,j+1) - hsq*b(i,j));
+//                u(i,j) = (1-omega) * u(i,j) + qomega * (u(i-1,j) + u(i+1,j) + u(i, j-1) + u(i,j+1) - hsq*b(i,j));
 
-//                u(idx) = oneMinusOmega * u(idx) + qomega * (u(idx+1) + u(idx-1) + u(idx+u.n()) + u(idx-u.n()) - hsq * b(idx));
-//                data[idx] = oneMinusOmega * data[idx] + qomega * (data[idx+1] + data[idx-1] + data[idx+u.n()] + data[idx-u.n()] - hsq * rhs[idx]);
+                u(idx) = oneMinusOmega * u(idx) + qomega * (u(idx+1) + u(idx-1) + u(idx+u.n()) + u(idx-u.n()) - hsq * b(idx));
+                data[idx] = oneMinusOmega * data[idx] + qomega * (data[idx+1] + data[idx-1] + data[idx+u.n()] + data[idx-u.n()] - hsq * rhs[idx]);
             }
         }
     }

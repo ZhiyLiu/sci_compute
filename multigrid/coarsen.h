@@ -30,17 +30,17 @@ void coarsen(DTMesh2D& input, DTMutableMesh2D& output)
                 }
                 else
                 {
-                    double sum = inputData(i,j) +\
-                        0.5 * inputData(i-1,j) +0.5 * inputData(i+1,j) + \
-                        0.5 * inputData(i,j-1) + 0.5 * inputData(i,j+1) +   \
-                        0.25 * inputData(i-1,j-1) + 0.25 * inputData(i+1,j+1) + 0.25 * inputData(i+1,j-1) +0.25 * inputData(i-1,j+1);
-                    outputData(i/2,j/2) = 0.25 * sum;
-                    /* double sum = inputPointer[inputIndex] + \ */
-                    /*     0.5 * inputPointer[inputIndex-1] + 0.5 * inputPointer[inputIndex+1] + \ */
-                    /*     0.5 * inputPointer[inputIndex-iWidth] + 0.5 * inputPointer[inputIndex+iWidth] + \ */
-                    /*     0.25 * inputPointer[inputIndex-iWidth-1] + 0.25 * inputPointer[inputIndex-iWidth+1] +\ */
-                    /*     0.25 * inputPointer[inputIndex+iWidth-1] + 0.25 * inputPointer[inputIndex+iWidth+1]; */
-                    /* outputPointer[outputIndex] = 0.25 * sum; */
+                    /* double sum = inputData(i,j) +\ */
+                    /*     0.5 * inputData(i-1,j) +0.5 * inputData(i+1,j) + \ */
+                    /*     0.5 * inputData(i,j-1) + 0.5 * inputData(i,j+1) +   \ */
+                    /*     0.25 * inputData(i-1,j-1) + 0.25 * inputData(i+1,j+1) + 0.25 * inputData(i+1,j-1) +0.25 * inputData(i-1,j+1); */
+                    /* outputData(i/2,j/2) = 0.25 * sum; */
+                    double sum = inputPointer[inputIndex] + \
+                        0.5 * inputPointer[inputIndex-1] + 0.5 * inputPointer[inputIndex+1] + \
+                        0.5 * inputPointer[inputIndex-iWidth] + 0.5 * inputPointer[inputIndex+iWidth] + \
+                        0.25 * inputPointer[inputIndex-iWidth-1] + 0.25 * inputPointer[inputIndex-iWidth+1] +\
+                        0.25 * inputPointer[inputIndex+iWidth-1] + 0.25 * inputPointer[inputIndex+iWidth+1];
+                    outputPointer[outputIndex] = 0.25 * sum;
                 }
 
             }
@@ -61,8 +61,8 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
         for(int j = 0; j < outputData.n(); ++j)
         {
             int outputIndex = i * outputData.n() + j;
-            outputData(i,j) = 0.0;
-//            outputPointer[outputIndex] = 0.0;
+//            outputData(i,j) = 0.0;
+            outputPointer[outputIndex] = 0.0;
         }
     }
 
@@ -91,8 +91,8 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
                 int inputIndex = 0.5 * i * inputData.n() + 0.5 * j;
                 int outputIndex = i * outputData.n() + j;
                 int oWidth = outputData.n();
-//                outputPointer[outputIndex+1] = 0.5 * (inputPointer[inputIndex] + inputPointer[inputIndex+1]);
-                outputData(i,j+1) = 0.5 * (inputData(i/2,j/2) + inputData(i/2, j/2+1));
+                outputPointer[outputIndex+1] = 0.5 * (inputPointer[inputIndex] + inputPointer[inputIndex+1]);
+//                outputData(i,j+1) = 0.5 * (inputData(i/2,j/2) + inputData(i/2, j/2+1));
             }
         }
     }
@@ -105,8 +105,8 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
                 int inputIndex = 0.5 * i * inputData.n() + 0.5 * j;
                 int outputIndex = i * outputData.n() + j;
                 int oWidth = outputData.n();
-//                outputPointer[outputIndex + oWidth] = (outputPointer[outputIndex] + outputPointer[outputIndex+2*oWidth]) * 0.5;
-                outputData(i+1,j) = 0.5 * (inputData(i/2,j/2) + inputData(i/2+1, j/2));
+                outputPointer[outputIndex + oWidth] = (outputPointer[outputIndex] + outputPointer[outputIndex+2*oWidth]) * 0.5;
+//                outputData(i+1,j) = 0.5 * (inputData(i/2,j/2) + inputData(i/2+1, j/2));
 
             }
         }
@@ -120,8 +120,8 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
                 int inputIndex = 0.5 * i * inputData.n() + 0.5 * j;
                 int outputIndex = i * outputData.n() + j;
                 int oWidth = outputData.n();
-//                outputPointer[outputIndex + oWidth + 1] = 0.25 * (inputPointer[inputIndex] + inputPointer[inputIndex + 1] + inputPointer[inputIndex+inputData.n()] + inputPointer[inputIndex+inputData.n() + 1]);
-                outputData(i+1, j+1) = 0.25 * (inputData(i/2,j/2) + inputData(i/2+1,j/2) + inputData(i/2, j/2+1) + inputData(i/2+1, j/2+1));
+                outputPointer[outputIndex + oWidth + 1] = 0.25 * (inputPointer[inputIndex] + inputPointer[inputIndex + 1] + inputPointer[inputIndex+inputData.n()] + inputPointer[inputIndex+inputData.n() + 1]);
+//                outputData(i+1, j+1) = 0.25 * (inputData(i/2,j/2) + inputData(i/2+1,j/2) + inputData(i/2, j/2+1) + inputData(i/2+1, j/2+1));
             }
         }
     }

@@ -4,24 +4,32 @@
 #include "DTDoubleArray.h"
 
 //void construct_A(int m, int n, double scale, int cols);
-double residual(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double scale, DTMutableDoubleArray& r)
+double residual(DTMutableDoubleArray& u, DTMutableDoubleArray& bArray, double scale, DTMutableDoubleArray& rArray)
 {
     double inf_norm = -1.0;
     double* data = u.Pointer();
+    double* r = rArray.Pointer();
+    double* b = bArray.Pointer();
     for(int i = 1; i < u.m()-1; ++i)
     {
         for(int j = 1; j < u.n()-1; ++j)
         {
             // rowNum in right hand side vector
             int idx = i*u.n() + j;
-            double ax = 4 * u(i,j) - u(i,j-1) - u(i,j+1) - u(i+1,j) - u(i-1,j);
-//            double ax = 4 * data[idx] - data[idx -1] - data[idx + 1] - data[idx+u.n()] - data[idx - u.n()];
+//            double ax = 4 * u(i,j) - u(i,j-1) - u(i,j+1) - u(i+1,j) - u(i-1,j);
+            double ax = 4 * data[idx] - data[idx -1] - data[idx + 1] - data[idx+u.n()] - data[idx - u.n()];
             ax *= scale;
-            r(i,j) = -b(i,j) - ax;
-            if(inf_norm < abs(r(i,j)))
+//            r(i,j) = -b(i,j) - ax;
+            r[idx] = -b[idx] - ax; // NOTE: This is Ax-b!!! only when there is an equation,like solving Ax=b, we can multiply negative sign on both sides. Otherwise,b is b, not -b.A is 1,1,1,1,-4
+            if(inf_norm < abs(r[idx]))
             {
-                inf_norm = abs(r(i,j));
+                inf_norm = abs(r[idx]);
             }
+
+            /* if(inf_norm < abs(r(i,j))) */
+            /* { */
+            /*     inf_norm = abs(r(i,j)); */
+            /* } */
         }
     }
     return inf_norm;

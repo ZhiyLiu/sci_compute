@@ -1,7 +1,7 @@
 clear all;
 
 % generate grid data
-dim = 1025;
+dim = 9;
 space = 1/dim;
 u = zeros(dim, dim);
 f = randomRHS(dim);
@@ -31,7 +31,7 @@ plot(log10(r3));hold on;
 plot(log10(r4));hold on;
 plot(log10(r5));hold on;
 maxLength = max([length(r1), length(r2), length(r3), length(r4), length(r5)]);
-set(gca, 'xtick', 0:maxLength+10);
+%set(gca, 'xtick', 0:maxLength+10);
 %ylim([-1,-0.2]);
 legend( ...
 num2str(omegaList(1)),...
@@ -40,3 +40,7 @@ num2str(omegaList(3)), ...
 num2str(omegaList(4)), ...
 num2str(omegaList(5))...
 );
+
+title('Varying omega');
+ylabel('log10(residual_norm)');
+xlabel('# v_cycles');
