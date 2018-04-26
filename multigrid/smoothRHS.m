@@ -6,4 +6,8 @@ function f = smoothRHS(dim)
     f = zeros(dim,dim);
     f = mvnpdf([X(:) Y(:)], 0.5, Sigma);
     f = reshape(f, dim, dim);
+    f(1, :)  = 0;
+    f(end, :) = 0;
+    f(:, 1) = 0;
+    f(:, end) = 0;
 end

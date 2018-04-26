@@ -1,16 +1,7 @@
 #include <math.h>
 #include <iostream>
 #include <algorithm>
-#include "lapacke.h"
-#include "DTMatlabDataFile.h"
-#include "DTArguments.h"
 #include "DTDoubleArray.h"
-#include "DTIntArray.h"
-#include "DTMesh2D.h"
-#include "DTFunction2D.h"
-#include "DTMesh2DGrid.h"
-#include "DTSeriesMesh2D.h"
-#include "time.h"
 #include <Eigen/Sparse>
 #include<Eigen/SparseCholesky>
 

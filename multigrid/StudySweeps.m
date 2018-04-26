@@ -1,5 +1,5 @@
 clear all;
-dim = 33;
+dim = 20;
 space = 1/dim;
 u = zeros(dim, dim);
 %f = randomRHS(dim);

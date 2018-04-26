@@ -4,7 +4,6 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
-#include "lapacke.h"
 #include "DTMatlabDataFile.h"
 #include "DTArguments.h"
 #include "DTDoubleArray.h"
@@ -22,10 +21,10 @@
 #include "residual.h"
 #include "coarsen.h"
 
-std::vector<double> residuals;
 void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, double h, int Nb, int Na, DTPoint2D origin)
 {
     // terminate criteria
+//    if(h >= h_max)
     if(b.m() < 6 || b.n() < 6)
     {
         //solve it if the size excluding boundary is 3*3 or 2*2
@@ -71,47 +70,16 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
      *************************/
     double scale = 1/(h*h);
     DTMutableDoubleArray r(b.m(),b.n());
-    double inf_norm = residual(u, b.Pointer(), scale, r.Pointer());
-    residuals.push_back(inf_norm);
+    double res = residual(u, b, scale, r);
 
     /********************************
      //    Test Residual
      *************************/
-/*    DTMatlabDataFile outputResidual("OutputResidual.mat", DTFile::NewReadWrite);
+    DTMatlabDataFile outputResidual("OutputResidual.mat", DTFile::NewReadWrite);
       Write(outputResidual, "b", b);
       Write(outputResidual, "r", r);
       Write(outputResidual, "u", u);
-*/
 
-    /********************************
-     //    Test Coarsen & Refine
-     *************************/
-/*    int dim = 9; // 9*9 include bdry should coarsen to 5*5
-      h = 0.025;
-      DTPoint2D origin(0.0, 0.0);
-
-      DTMutableDoubleArray data(dim, dim);
-      for(int i = 0; i < dim; ++i)
-      {
-      for(int j = 0; j < dim; ++j)
-      {
-      double x = i* h;
-      double y = j * h;
-      data(i,j) = x + 5 * y;
-      }
-      }
-      DTMesh2D fineGrid(DTMesh2DGrid(origin, h, h, dim, dim), data);
-
-      DTMutableMesh2D coarseGrid(DTMesh2DGrid(origin, 2*h, 2*h,1+ dim/2, 1 + dim/2), DTMutableDoubleArray((int)(1+dim/2), (int)(1+dim/2)));
-      coarsen(fineGrid, coarseGrid);
-
-      DTMutableMesh2D refineGrid(DTMesh2DGrid(origin, h, h, dim, dim), DTMutableDoubleArray(dim,dim));
-      refine(coarseGrid, refineGrid);
-      DTMatlabDataFile outputCoarsen("Coarsen.mat", DTFile::NewReadWrite);
-      Write(outputCoarsen, "fine", fineGrid);
-      Write(outputCoarsen, "coarse", coarseGrid);
-      Write(outputCoarsen, "refine", refineGrid);
-*/
 
     /********************************
      //    Coarsen
@@ -127,13 +95,19 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
      *************************/
     DTMutableDoubleArray rc = coarseGrid.DoubleData();
     DTMutableDoubleArray uc = DTMutableDoubleArray(rc.m(), rc.n());
+    double* ucPointer = uc.Pointer();
+    for(int i = 0; i < uc.Length(); ++i)
+    {
+        ucPointer[i] = 0;
+    }
     recurse(uc, rc, omega, 2*h, Nb, Na, origin);
 
     /********************************
      //    Refine & Update
      *************************/
+    DTMutableMesh2D targetCoarseGrid(DTMesh2DGrid(origin, 2*h, 2*h, uc.m(), uc.n()), uc);
     DTMutableMesh2D refineGrid(DTMesh2DGrid(origin, h , h, b.m(), b.n()), DTMutableDoubleArray(b.m(),b.n()));
-    refine(coarseGrid, refineGrid);
+    refine(targetCoarseGrid, refineGrid);
     DTMutableDoubleArray refine_residual = refineGrid.DoubleData();
     double* uPointer = u.Pointer();
     double* rPointer = refine_residual.Pointer();
@@ -142,15 +116,16 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
         for(int j = 1; j < refineGrid.n() - 1; ++j)
         {
             int idx = i*refineGrid.n() +j;
-//            u(i,j) += refine_residual(i,j);
-            uPointer[idx] += rPointer[idx];
+            u(i,j) += refine_residual(i,j);
+//            uPointer[idx] += rPointer[idx];
         }
     }
-
+    res = residual(u, b, scale, r);
     /********************************
      //    Sweep after
      *************************/
     sweep(u, b, omega, h, Na);
+    res = residual(u, b, scale, r);
 
 }
 int main(int argc, char** argv)
@@ -167,6 +142,7 @@ int main(int argc, char** argv)
         Nb =  3;
         Na = 3;
         omega = 0.8;
+        id = 1111;
     }
     else
     {
@@ -178,7 +154,7 @@ int main(int argc, char** argv)
 
     }
 
-    residuals.clear();
+
     // Successive over relaxation(w) method
     DTMatlabDataFile inputFile("MyInput.mat", DTFile::ReadOnly);
     DTMesh2D f;
@@ -188,30 +164,46 @@ int main(int argc, char** argv)
 
     DTMesh2DGrid grid = f.Grid();
     double h = grid.dx();
-    DTMutableDoubleArray u = u0.DoubleData().Copy();
+    std::vector<double> residuals;
+    residuals.clear();
+
     DTMutableDoubleArray b = f.DoubleData().Copy();
 
-    recurse(u, b, omega, h, Nb, Na, grid.Origin());
+    double scale = 1/(h*h);
+    DTMutableDoubleArray r(b.m(),b.n());
 
     DTMatlabDataFile outputFile("OutputAll.mat", DTFile::NewReadWrite);
+    DTMutableDoubleArray u = u0.DoubleData().Copy();
+//    directSolve(b.m()-2, b.n()-2, h, b, u);
+
+    double inf_norm;
+//    inf_norm = residual(u, b.Pointer(), scale, r.Pointer());
+
+    for(int i = 0; i < 100; ++i)
+    {
+        recurse(u, b, omega, h, Nb, Na, grid.Origin());
+        inf_norm = residual(u, b, scale, r);
+        residuals.push_back(inf_norm);
+
+    }
+
     DTMutableDoubleArray rList(residuals.size(), 1);
     ostringstream plotId;
     plotId << "r";
     plotId << id;
 
+    // ostringstream uId;
+    // uId << "u";
+    // uId << id;
     std::string sId = plotId.str();
-    if(outputFile.Contains(sId))
-    {
-        Read(outputFile, sId, rList);
-    }
-
+//    std::string suId = uId.str();
     for(int i = 0; i < residuals.size(); ++i)
     {
         rList(i) = residuals[i];
     }
 
     Write(outputFile, sId, rList);
-//    Write(outputFile, "u", u);
+    Write(outputFile, "u", u);
 
     return 1;
 }
