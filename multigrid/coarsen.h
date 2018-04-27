@@ -12,9 +12,9 @@ void coarsen(DTMesh2D& input, DTMutableMesh2D& output)
 
     const double* inputPointer = inputData.Pointer();
     double* outputPointer = outputData.Pointer();
-    for(int i = 0; i < inputData.m(); ++i)
+    for(int j= 0; j < inputData.n(); ++j)
     {
-        for(int j= 0; j < inputData.n(); ++j)
+        for(int  i = 0; i < inputData.m(); ++i)
         {
             // keep the even row and column
             if(i % 2 == 0 && j % 2 == 0)
@@ -56,9 +56,9 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
     const double* inputPointer = inputData.Pointer();
     double* outputPointer = outputData.Pointer();
     // reset value
-    for(int i = 0; i < outputData.m(); ++i)
+    for(int j = 0; j < outputData.n(); ++j)
     {
-        for(int j = 0; j < outputData.n(); ++j)
+        for(int  i = 0; i < outputData.m(); ++i)
         {
             int outputIndex = i * outputData.n() + j;
 //            outputData(i,j) = 0.0;
@@ -66,9 +66,9 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
         }
     }
 
-    for(int i = 0; i < outputData.m(); ++i)
+    for(int  j = 0; j < outputData.n(); ++j)
     {
-        for(int j = 0; j < outputData.n(); ++j)
+        for(int i = 0; i < outputData.m(); ++i)
         {
             if(i % 2 == 0 && j % 2 == 0)
             {
@@ -77,14 +77,14 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
                 int oWidth = outputData.n();
 
                 double val = inputPointer[inputIndex];
-//                outputPointer[outputIndex] = val;
-                outputData(i,j) = inputData(i/2,j/2);
+                outputPointer[outputIndex] = val;
+//                outputData(i,j) = inputData(i/2,j/2);
             }
         }
     }
-    for(int i = 0; i < outputData.m(); ++i)
+    for(int  j = 0; j < outputData.n()-1; ++j)
     {
-        for(int j = 0; j < outputData.n()-1; ++j)
+        for(int i = 0; i < outputData.m(); ++i)
         {
             if(i % 2 == 0 && j % 2 == 0)
             {
@@ -96,9 +96,9 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
             }
         }
     }
-    for(int i = 0; i < outputData.m() - 2; ++i)
+    for(int  j = 0; j < outputData.n(); ++j)
     {
-        for(int j = 0; j < outputData.n(); ++j)
+        for(int i = 0; i < outputData.m() - 2; ++i)
         {
             if(i % 2 == 0 && j % 2 == 0)
             {
@@ -111,9 +111,9 @@ void refine(DTMesh2D& input, DTMutableMesh2D& output)
             }
         }
     }
-    for(int i = 0; i < outputData.m() - 1; ++i)
+    for(int  j = 0; j < outputData.n() - 1; ++j)
     {
-        for(int j = 0; j < outputData.n() - 1; ++j)
+        for(int i = 0; i < outputData.m() - 1; ++i)
         {
             if(i % 2 == 0 && j % 2 == 0)
             {

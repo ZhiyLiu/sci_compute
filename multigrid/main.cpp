@@ -36,6 +36,10 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
     /****************************
      //    Sweep before
      *************************/
+
+    // DTMutableDoubleArray uTest(u.m(), u.n());
+    // directSolve(u.m() - 2, u.n() -2, h, b, uTest);
+
     sweep(u, b, omega, h, Nb);
 
     /********************************
@@ -75,11 +79,15 @@ void recurse(DTMutableDoubleArray& u, DTMutableDoubleArray& b, double omega, dou
     refine(targetCoarseGrid, refineGrid);
     DTMutableDoubleArray refine_residual = refineGrid.DoubleData();
 
+    // DTMutableDoubleArray rTest(r.m(), r.n());
+    // directSolve(b.m()-2, b.n()-2, h, r, rTest);
+    // res = residual(rTest, r, scale, r);
+
     double* uPointer = u.Pointer();
     double* rPointer = refine_residual.Pointer();
-    for(int i = 1; i < refineGrid.m() - 1; ++i)
+    for(int j = 1; j < refineGrid.n() - 1; ++j)
     {
-        for(int j = 1; j < refineGrid.n() - 1; ++j)
+        for(int i = 1; i < refineGrid.m() - 1; ++i)
         {
             int idx = i*refineGrid.n() +j;
 //            u(i,j) -= refine_residual(i,j);
@@ -99,16 +107,17 @@ int main(int argc, char** argv)
     /********************************
      //    Read input data
      *************************/
-    int Nb, Na, NList, id;
+    int Nb, Na, NList, id, v_cycles;
     double omega;
-    if(argc < 6)
+    if(argc < 7)
     {
-        std::cout << "Usage: " << argv[0] << " <Length of NList>  <sweep before> <sweeps after> <omega> <instance id>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <Length of NList>  <sweep before> <sweeps after> <omega> <instance id> <#v cycles>" << std::endl;
         std::cout << "Currently use default value." << std::endl;
         Nb =  3;
         Na = 3;
         omega = 0.8;
         id = 1111;
+        v_cycles = 25;
     }
     else
     {
@@ -117,6 +126,7 @@ int main(int argc, char** argv)
         Na = atoi(argv[3]);
         omega = atof(argv[4]);
         id = atoi(argv[5]);
+        v_cycles = atoi(argv[6]);
 
     }
 
@@ -144,7 +154,7 @@ int main(int argc, char** argv)
     double inf_norm = 0.0;
     clock_t t1, t2;
     double total_time = 0.0;
-    int v_cycles = 100;
+
     for(int i = 0; i < v_cycles; ++i)
     {
         t1 = clock();

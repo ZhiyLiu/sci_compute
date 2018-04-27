@@ -65,14 +65,14 @@ int main()
     }
     std::cout << "eror norm:" << err << std::endl;
     Write(outputSweep, "u_final", u);
-    std::cout << "u"<< std::endl;
-    u.pall();
-    std::cout << "exact"<< std::endl;x_exact.pall();
-    std::cout << "b" << std::endl;
-    b.pall();
+//    std::cout << "u"<< std::endl;
+//    u.pall();
+//    std::cout << "exact"<< std::endl;x_exact.pall();
+//    std::cout << "b" << std::endl;
+//    b.pall();
 
     double res = residual(u, b, scale, r);
-    r.pall();
+//    r.pall();
 
     return 1;
 }

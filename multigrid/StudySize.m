@@ -1,6 +1,7 @@
 clear all;
+close all;
 
-dimList = [33,65,129];
+dimList = [257,513,1025];
 NList = length(dimList);
 na = 3; nb = 3;
 omega = 0.6;
@@ -17,7 +18,7 @@ for i = 1:NList
 
     save 'MyInput.mat' '-v4' ;
     s1 = './mgv';
-    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(nb),{' '}, num2str(na), {' '}, num2str(omega), {' '}, num2str(i)));
+    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(nb),{' '}, num2str(na), {' '}, num2str(omega), {' '}, num2str(i), {' 25'}));
     system(command);
 %    !./mgv $NList $na $nb $omega $i
     load('OutputAll.mat');
@@ -31,5 +32,5 @@ maxLength = max([length(r1), length(r2), length(r3)]);
 legend(num2str(dimList(1)),num2str(dimList(2)), num2str(dimList(3)));
 
 title('Study domain size');
-ylabel('log10(residual_norm)');
-xlabel('# v_cycles');
+ylabel('log10(residual_norm)', 'Interpreter','none');
+xlabel('# v_cycles', 'Interpreter','none');

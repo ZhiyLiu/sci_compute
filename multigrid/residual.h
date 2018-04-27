@@ -10,9 +10,9 @@ double residual(DTMutableDoubleArray& u, DTMutableDoubleArray& bArray, double sc
     double* data = u.Pointer();
     double* r = rArray.Pointer();
     double* b = bArray.Pointer();
-    for(int i = 1; i < u.m()-1; ++i)
+    for(int  j = 1; j < u.n()-1; ++j)
     {
-        for(int j = 1; j < u.n()-1; ++j)
+        for(int i = 1; i < u.m()-1; ++i)
         {
             // rowNum in right hand side vector
             int idx = i*u.n() + j;

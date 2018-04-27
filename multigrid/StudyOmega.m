@@ -1,25 +1,26 @@
 clear all;
+close all;
 
 % generate grid data
-dim = 9;
+dim = 513;
 space = 1/dim;
 u = zeros(dim, dim);
-f = randomRHS(dim);
-%f = smoothRHS(dim);
+%f = randomRHS(dim);
+f = smoothRHS(dim);
 f_loc = [0; 0; space; space];
 u_loc = [0; 0; space; space];
 
 save 'MyInput.mat' '-v4' ;
 
 % vary omega
-omegaList = [0.2,0.66,0.8, 1, 0];
+omegaList = [0.2,0.6,0.77, 0.8, 0.9];
 NList = length(omegaList);
 na = 3; nb = 3;
 for i = 1:NList
     omega = omegaList(i);
 
     s1 = './mgv';
-    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(na),{' '}, num2str(nb), {' '}, num2str(omega), {' '}, num2str(i)));
+    command = char(strcat(s1, {' '}, num2str(NList), {' '}, num2str(nb),{' '}, num2str(na), {' '}, num2str(omega), {' '}, num2str(i), {' 25'}));
     system(command);
 %    !./mgv $NList $na $nb $omega $i
     load('OutputAll.mat');
@@ -42,5 +43,5 @@ num2str(omegaList(5))...
 );
 
 title('Varying omega');
-ylabel('log10(residual_norm)');
-xlabel('# v_cycles');
+ylabel('log10(residual_norm)', 'Interpreter','none');
+xlabel('# v_cycles', 'Interpreter','none');
